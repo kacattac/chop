@@ -100,8 +100,33 @@ header h1 {
 }
 
 .content {
-  margin: 0;
   padding: 1rem;
+}
+
+.step-heading {
+  margin: 1.25rem 0 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.6;
+}
+
+.step-heading:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .step-heading {
+    border-top-color: #3a3a3d;
+  }
+}
+
+.step-body {
   white-space: pre-wrap;
   word-break: break-word;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

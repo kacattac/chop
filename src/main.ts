@@ -18,7 +18,7 @@ app.innerHTML = `
     <section id="results" hidden>
       <div class="tabs" id="tabs"></div>
       <div class="panel">
-        <pre id="content" class="content"></pre>
+        <div id="content" class="content"></div>
       </div>
       <div class="notes" id="notes"></div>
       <div class="actions">
@@ -34,27 +34,32 @@ app.innerHTML = `
 const fileInput = document.querySelector<HTMLInputElement>("#file-input")!;
 const resultsSection = document.querySelector<HTMLElement>("#results")!;
 const tabsEl = document.querySelector<HTMLDivElement>("#tabs")!;
-const contentEl = document.querySelector<HTMLPreElement>("#content")!;
+const contentEl = document.querySelector<HTMLDivElement>("#content")!;
 const notesEl = document.querySelector<HTMLDivElement>("#notes")!;
 const downloadBtn = document.querySelector<HTMLButtonElement>("#download-btn")!;
 const filenamePreview = document.querySelector<HTMLSpanElement>("#filename-preview")!;
 const errorEl = document.querySelector<HTMLParagraphElement>("#error")!;
 
+type StepSelector = number | "all";
+
 let currentSteps: StepOutput[] = [];
 let currentFinalFileName = "";
-let activeStep = 1;
+let activeStep: StepSelector = "all";
 
 function renderTabs() {
-  tabsEl.innerHTML = currentSteps
+  const allButton = `<button class="tab${activeStep === "all" ? " active" : ""}" data-step="all">All steps</button>`;
+  const stepButtons = currentSteps
     .map(
       (s) =>
         `<button class="tab${s.step === activeStep ? " active" : ""}" data-step="${s.step}">${s.step}. ${s.title}</button>`,
     )
     .join("");
+  tabsEl.innerHTML = allButton + stepButtons;
 
   tabsEl.querySelectorAll<HTMLButtonElement>(".tab").forEach((btn) => {
     btn.addEventListener("click", () => {
-      activeStep = parseInt(btn.dataset.step!, 10);
+      const value = btn.dataset.step!;
+      activeStep = value === "all" ? "all" : parseInt(value, 10);
       renderTabs();
       renderContent();
     });
@@ -62,17 +67,25 @@ function renderTabs() {
 }
 
 function renderContent() {
-  const step = currentSteps.find((s) => s.step === activeStep)!;
-  // Soft returns are rendered as real line breaks inside <pre>; the raw
-  // marker in the working text is a plain "\n".
-  contentEl.textContent = step.content;
+  if (activeStep === "all") {
+    contentEl.innerHTML = currentSteps
+      .map(
+        (s) =>
+          `<h3 class="step-heading">${s.step}. ${escapeHtml(s.title)}</h3><div class="step-body">${escapeHtml(s.content)}</div>`,
+      )
+      .join("");
+  } else {
+    const step = currentSteps.find((s) => s.step === activeStep)!;
+    contentEl.innerHTML = `<div class="step-body">${escapeHtml(step.content)}</div>`;
+  }
 
-  const allNotes = currentSteps
-    .filter((s) => s.step <= activeStep)
-    .flatMap((s) => s.notes.map((n) => `Step ${s.step}: ${n}`));
+  const selected = activeStep;
+  const relevantSteps =
+    selected === "all" ? currentSteps : currentSteps.filter((s) => s.step <= selected);
+  const allNotes = relevantSteps.flatMap((s) => s.notes.map((n) => `Step ${s.step}: ${n}`));
 
   notesEl.innerHTML = allNotes.length
-    ? `<h3>Notes so far</h3><ul>${allNotes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+    ? `<h3>Notes</h3><ul>${allNotes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
     : "";
 }
 
@@ -94,7 +107,7 @@ fileInput.addEventListener("change", async () => {
     const { steps, finalFileName } = await runPipeline(rawText, file.name);
     currentSteps = steps;
     currentFinalFileName = finalFileName;
-    activeStep = 1;
+    activeStep = "all";
 
     resultsSection.hidden = false;
     filenamePreview.textContent = `Will export as: ${finalFileName}`;
